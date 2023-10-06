@@ -31,10 +31,11 @@ class FullyConnectedNet():
         self.activation_backward = get_activation_forward(activation)
 
         # first layer
-        self.params["W1"] = np.random.randn(input_dim, hidden_dims[0])
-        self.grads["W1"] = None
-        self.params["b1"] = np.random.randn(hidden_dims[0])
-        self.grads["b1"] = None
+        if self.num_layers > 1:
+            self.params["W1"] = np.random.randn(input_dim, hidden_dims[0])
+            self.grads["W1"] = None
+            self.params["b1"] = np.random.randn(hidden_dims[0])
+            self.grads["b1"] = None
 
         # intermediate layers
         for i in range(1, len(hidden_dims)):
@@ -48,7 +49,7 @@ class FullyConnectedNet():
             self.grads[f"b{j}"] = None
 
         # last layer
-        in_dim = hidden_dims[-1]
+        in_dim = hidden_dims[-1] if self.num_layers > 1 else input_dim
         out_dim = num_classes
         j = len(hidden_dims) + 1
         self.params[f"W{j}"] = np.random.randn(in_dim, out_dim)
@@ -59,26 +60,26 @@ class FullyConnectedNet():
         for name, param in self.params.items():
             self.params[name] = param.astype(self.dtype)
     
-    def eval(value=True):
+    def eval(self, value=True):
         if value is True:
             self.mode = 'test'
         else:
             self.mode = 'train'
     
-    def train(value=True):
+    def train(self, value=True):
         if value is True:
             self.mode = 'train'
         else:
             self.mode = 'test'
     
-    def zero_grad(set_to_none=True):
-        for name, grad in grads.items():
+    def zero_grad(self, set_to_none=True):
+        for name, grad in self.grads.items():
             if set_to_none:
-                grads[name] = None
+                self.grads[name] = None
             else:
-                grads[name] = np.zeros_like(self.params[name])
+                self.grads[name] = np.zeros_like(self.params[name])
 
-    def forward(x):
+    def forward(self, x):
         cache = {}
         activ = self.activation
         activation_forward = self.activation_forward
@@ -107,8 +108,8 @@ class FullyConnectedNet():
 
         return out
     
-    def backward(dout):
-        if mode == 'test':
+    def backward(self, dout):
+        if self.mode == 'test':
             return
 
         grads = self.grads

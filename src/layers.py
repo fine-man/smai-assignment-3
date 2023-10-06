@@ -153,6 +153,26 @@ def relu_backward(dout, cache):
     dx = local_dx * dout
     return dx
 
+def get_activation_forward(activation='relu'):
+    if activation == 'sigmoid':
+        return sigmoid_forward
+    elif activation == 'tanh':
+        return tanh_forward
+    elif activation == "relu":
+        return relu_forward
+    else:
+        return None
+    
+def get_activation_backward(activation='relu'):
+    if activation == 'sigmoid':
+        return sigmoid_backward
+    elif activation == 'tanh':
+        return tanh_backward
+    elif activation == "relu":
+        return relu_backward
+    else:
+        return None
+
 def softmax(x):
     """Computers the softmax probabilities
 
@@ -171,11 +191,11 @@ def softmax(x):
 
     # probability of each class for each example
     # Shape : (N, C)
-    prob = scores_exp/np.sum(scores_exp, axis=1)
+    prob = scores_exp/np.sum(scores_exp, axis=1, keepdims=True)
 
     return prob
 
-def softmax_loss(x, y):
+def softmax_loss(x, y, return_grad=False):
     """Computes the loss and gradient for softmax classification.
 
     Inputs:
@@ -202,6 +222,8 @@ def softmax_loss(x, y):
     I_j_equals_yi[np.arange(num_examples), y] = 1
 
     loss = np.mean(-np.log(prob[np.arange(num_examples), y]))
-    dx = (prob - I_j_equals_yi)/num_examples
-
-    return loss, dx
+    if return_grad:
+        dx = (prob - I_j_equals_yi)/num_examples
+        return loss, dx
+    else:
+        return loss
