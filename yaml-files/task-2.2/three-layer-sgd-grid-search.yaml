@@ -11,7 +11,7 @@ parameters:
   model.activation:
     values: ["relu", "sigmoid", "tanh"]
   model.num_layers:
-    value: 2
+    value: 3
   model.hidden_dims1:
     values: [8, 16, 32, 64, 128]
   model.hidden_dims2:
