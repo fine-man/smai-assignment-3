@@ -1,0 +1,38 @@
+method: grid
+project: smai-assignment3-task2
+name: single-layer-sgd-grid-search
+parameters:
+  criterion:
+    value: softmax
+  
+  # model config
+  model.input_dim:
+    value: 11
+  model.activation:
+    values: ["relu", "sigmoid", "tanh"]
+  model.num_layers:
+    value: 2
+  model.hidden_dims1:
+    values: [8, 16, 32, 64, 128]
+  model.hidden_dims2:
+    values: [8, 16, 32, 64, 128]
+  model.num_classes:
+    value: 6
+  
+  # optimizer config
+  optimizer.update_rule:
+    value: sgd
+  optimizer.learning_rate:
+    values: [0.0001, 0.0005, 0.001, 0.01, 0.1]
+  
+  # training config
+  training.update_type:
+    values: ["minibatch", "batch", "stochastic"]
+  training.batch_size:
+    values: [8, 16, 64, 128]
+  training.epochs:
+    value: 500
+  training.log_wandb:
+    value: True
+  training.verbose:
+    value: False

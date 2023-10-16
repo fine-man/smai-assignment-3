@@ -1,5 +1,6 @@
 import numpy as np
 from ..layers import *
+import copy
 
 class FullyConnectedNet():
     """Class for multi-layer fully connected Neural Network
@@ -13,12 +14,14 @@ class FullyConnectedNet():
         hidden_dims,
         num_classes,
         activation='relu',
+        last_activation=None, # activation to be used after last layer
         dtype=np.float32,
     ):
         self.input_dim = input_dim
         self.hidden_dims = hidden_dims
         self.num_layers = len(hidden_dims) + 1
         self.activation = activation
+        self.last_activation = last_activation
         self.dtype = dtype
         
         self.mode = 'train'
@@ -28,7 +31,12 @@ class FullyConnectedNet():
 
         # getting the activation function
         self.activation_forward = get_activation_forward(activation)
-        self.activation_backward = get_activation_forward(activation)
+        self.activation_backward = get_activation_backward(activation)
+
+        # Activation to be applied after the last affine layer
+        if self.last_activation:
+            self.last_activation_forward = get_activation_forward(last_activation)
+            self.last_activation_backward = get_activation_backward(last_activation)
 
         # first layer
         if self.num_layers > 1:
@@ -72,6 +80,12 @@ class FullyConnectedNet():
         else:
             self.mode = 'test'
     
+    def parameters(self):
+        return self.params
+    
+    def load_params(self, params):
+        self.params = copy.deepcopy(params)
+    
     def zero_grad(self, set_to_none=True):
         for name, grad in self.grads.items():
             if set_to_none:
@@ -82,7 +96,10 @@ class FullyConnectedNet():
     def forward(self, x):
         cache = {}
         activ = self.activation
+        last_activ = self.last_activation
         activation_forward = self.activation_forward
+        if self.last_activation:
+            last_activation_forward = self.last_activation_forward
         out = x
 
         # forwarding through all layers except the last one
@@ -95,16 +112,20 @@ class FullyConnectedNet():
             else:
                 out, _ = affine_forward(out, w, b)
                 out, _ = activation_forward(out)
-            
+        
         # last layer
         j = self.num_layers
         w, b = self.params[f"W{j}"], self.params[f"b{j}"]
 
         if self.mode == "train":
             out, cache[f"affine{j}"] = affine_forward(out, w, b)
+            if self.last_activation:
+                out, cache[f"{last_activ}"] = last_activation_forward(out)
             self.cache = cache
         else:
             out, _ = affine_forward(out, w, b)
+            if self.last_activation:
+                out, _ = last_activation_forward(out)
 
         return out
     
@@ -116,9 +137,16 @@ class FullyConnectedNet():
         cache = self.cache
         j = self.num_layers
         activ = self.activation
+        last_activ = self.last_activation
         activation_backward = self.activation_backward
+        if self.last_activation:
+            last_activation_backward = self.last_activation_backward
 
-        # backward pass of the last layer
+        # backward pass of the last activation layer if it exists
+        if self.last_activation:
+            dout = last_activation_backward(dout, cache[f"{last_activ}"])
+
+        # backward pass of the last affine layer
         dout, dw, db = affine_backward(dout, cache[f"affine{j}"])
         grads[f"W{j}"] = np.copy(dw) if grads[f"W{j}"] is None else grads[f"W{j}"] + dw
         grads[f"b{j}"] = np.copy(db) if grads[f"b{j}"] is None else grads[f"b{j}"] + db

@@ -45,7 +45,8 @@ class Solver():
         self.epoch = 0
         self.val_acc = 0
         self.best_params = {}
-        self.loss_history = []
+        self.train_loss_history = []
+        self.val_loss_history = []
         self.train_acc_history = []
         self.val_acc_history = []
 
@@ -67,8 +68,8 @@ class Solver():
             self.model.params[param_name] = next_w
             self.optim_configs[param_name] = next_config
 
-    def check_accuracy(self, X, y, batch_size=100, num_samples=None):
-        N = X.shape[0]
+    def check_accuracy(self, X, y, batch_size=100, num_samples=None, return_loss=False):
+        N = X.shape[0] # number of examples
 
         # Sub-sample the data
         if num_samples is not None and num_samples < N:
@@ -77,27 +78,36 @@ class Solver():
             y = y[mask]
             N = num_samples
 
-        # Find the number of batches
-        num_batches = max(N // batch_size, 1)
-        if N % batch_size != 0:
-            num_batches += 1
-        it = 0
-        acc = 0
+        # creating a minibatch generator
+        minibatch_gen = minibatch_generator(X, y, batch_size)
+        it = 0 # iteration number
+        accuracy = 0
         y_preds = []
+        total_loss = 0
 
-        # Find the predictions on the batches
+       # Find the predictions on the batches
         self.model.eval()
-        for i in range(num_batches):
-            start = i * batch_size
-            end = (i + 1) * batch_size
-            logits = self.model.forward(X[start:end])
+        for X_minibatch, y_minibatch in minibatch_gen:
+            logits = self.model.forward(X_minibatch)
+
+            # model predictions
             y_pred = np.argmax(logits, axis=1)
             y_preds.append(y_pred)
 
+            if return_loss:
+                # model loss
+                loss = softmax_loss(logits, y_minibatch)
+                total_loss += loss * X_minibatch.shape[0]
+
         # calculate accuracy
         y_preds = np.concatenate(y_preds, axis=0)
-        acc = np.mean(y_preds == y)
-        return acc
+        accuracy = np.mean(y_preds == y)
+
+        if return_loss:
+            loss = total_loss/X.shape[0]
+            return accuracy, loss
+
+        return accuracy
 
     def train(self):
         batch_size, num_epochs = self.batch_size, self.num_epochs
@@ -105,11 +115,13 @@ class Solver():
         iterations_per_epoch = max(self.num_train_samples // batch_size, 1)
         if self.num_train_samples % batch_size != 0:
             iterations_per_epoch += 1
+        # total number of iterations
         num_iterations = iterations_per_epoch * num_epochs
-        it = 1
+        it = 1 # current iteration number
 
         for epoch in range(1, num_epochs + 1):
             self.model.zero_grad()
+
             minibatch_gen = minibatch_generator(self.X_train, self.y_train, batch_size)
             self.model.train()
             for X_minibatch, y_minibatch in minibatch_gen:
@@ -118,7 +130,6 @@ class Solver():
 
                 # calculate loss
                 loss, dout = softmax_loss(logits, y_minibatch, return_grad=True)
-                self.loss_history.append(loss)
 
                 # dividing the softmax gradient by total number of samples
                 # when performing batch gradient descent
@@ -135,7 +146,7 @@ class Solver():
                 
                 # print iteration number and loss
                 if self.verbose and it % self.print_every == 0:
-                    print(f"Iteration: {it}/{num_iterations} | loss = {loss}")
+                    print(f"Iteration: {it}/{num_iterations} | loss = {loss:.4f}")
                 it += 1
             
             if self.update_type == "batch":
@@ -146,17 +157,23 @@ class Solver():
 
             # Calculating Training and Validation accuracy after every epoch
             self.model.eval()
-            train_acc = self.check_accuracy(
+            train_acc, train_loss = self.check_accuracy(
                 self.X_train, self.y_train,
-                batch_size=self.batch_size
+                batch_size=self.batch_size,
+                return_loss=True
             )
-            val_acc = self.check_accuracy(
+            val_acc, val_loss = self.check_accuracy(
                 self.X_val, self.y_val,
-                batch_size=self.batch_size
+                batch_size=self.batch_size,
+                return_loss=True
             )
 
+            # logging the train/val loss and accuracy
+            self.train_loss_history.append(train_loss)
+            self.val_loss_history.append(val_loss)
             self.train_acc_history.append(train_acc)
             self.val_acc_history.append(val_acc)
 
             if self.verbose is True:
-                print(f"Epoch: {self.epoch} | Train Accuracy: {train_acc*100:.3f} | Validation Accuracy: {val_acc*100:.3f}")
+                print(f"Epoch: {self.epoch} | Train Accuracy: {train_acc*100:.3f} | Val Accuracy: {val_acc*100:.3f} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f}")
+                print()

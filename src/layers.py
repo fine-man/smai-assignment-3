@@ -227,3 +227,63 @@ def softmax_loss(x, y, return_grad=False):
         return loss, dx
     else:
         return loss
+
+def MSELoss(x, y, return_grad=False):
+    """Computes the Mean Squared Error loss and gradient.
+
+    Inputs:
+    - x: Input data, of shape (N,) where x[i] gives the predicted regresion value
+        for the ith examples
+    - y: Vector of labels, of shape (N,) where y[i] is the label for x[i] and
+      0 <= y[i] < C
+
+    Returns a tuple of:
+    - loss: Scalar giving the loss
+    - dx: Gradient of the loss with respect to x
+    """
+    N = x.shape[0]
+    x = x.reshape(-1, 1)
+    y = y.reshape(-1, 1)
+
+    loss = np.mean((y - x) ** 2)
+
+    if return_grad:
+        dx = (-2/N) * (y - x)
+        return loss, dx
+    
+    return loss
+
+def CrossEntropyLoss(x, y, return_grad=False):
+    """Computes the loss and gradient for Cross Entropy loss.
+
+    Inputs:
+    - x: Input data, of shape (N, C) where x[i, j] is the score for the jth
+      class for the ith input.
+    - y: Vector of labels, of shape (N, C) where y[i, j] is the true class probability
+        of jth class for the ith example. This can also be of shape (N, )
+
+    Returns a tuple of:
+    - loss: Scalar giving the loss
+    - dx: Gradient of the loss with respect to x
+    """
+    N, C = x.shape[:2]
+
+    if len(y.shape) == 1:
+        y_ = np.zeros((N, C))
+        y_[np.arange(N), y] = 1.0
+        y = y_
+
+    # shape (N, )
+    loss = np.mean(-y * np.log(x))
+
+    if return_grad:
+        grad = np.zeros_like(x) # (N, C)
+        grad[:, :] = -y/x
+        return loss, grad
+    return loss
+
+def get_criterion(crit_name):
+    if crit_name == "MSE":
+        return MSELoss
+    else:
+        return softmax_loss
