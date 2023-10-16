@@ -189,7 +189,6 @@ def get_model(config):
     # Number of layers
     num_layers = config.pop("num_layers", 1)
     hidden_dims = []
-    hidden_dims.append(input_dim)
 
     for i in range(1, num_layers + 1):
         dim = config.pop(f"hidden_dims{i}")
