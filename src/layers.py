@@ -278,12 +278,46 @@ def CrossEntropyLoss(x, y, return_grad=False):
 
     if return_grad:
         grad = np.zeros_like(x) # (N, C)
-        grad[:, :] = -y/x
+        grad[:, :] = (-1/N) * y/x
+        return loss, grad
+    return loss
+
+def BCELoss(x, y, return_grad=False):
+    """Computes the loss and gradient for Binary Cross Entropy loss.
+
+    Inputs:
+    - x: Input data, of shape (N, C) where x[i, j] is the score for the jth
+      class for the ith input.
+    - y: Vector of labels, of shape (N, C) where y[i, j] is the true class probability
+        of jth class for the ith example. This can also be of shape (N, )
+
+    Returns a tuple of:
+    - loss: Scalar giving the loss
+    - dx: Gradient of the loss with respect to x
+    """
+    N, C = x.shape[:2]
+
+    if len(y.shape) == 1:
+        y_ = np.zeros((N, C))
+        y_[np.arange(N), y] = 1.0
+        y = y_
+
+    loss = -y * np.log(x) - (1 - y) * np.log(1 - x) # (N, C)
+    loss = np.sum(loss, axis=1) # (N, )
+    loss = np.mean(loss, axis=0) # ()
+
+    if return_grad:
+        grad = np.zeros_like(x) # (N, C)
+        grad[:, :] = (-1/N) * (y/x - (1-y)/(1-x))
         return loss, grad
     return loss
 
 def get_criterion(crit_name):
     if crit_name == "MSE":
         return MSELoss
+    elif crit_name == "CE":
+        return CrossEntropyLoss
+    elif crit_name == "BCE":
+        return BCELoss
     else:
         return softmax_loss

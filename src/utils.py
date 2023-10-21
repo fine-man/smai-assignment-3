@@ -5,7 +5,7 @@ from src.classifiers import *
 from .layers import get_criterion
 import wandb
 
-def check_accuracy(model, X, y, batch_size=100, num_samples=None, return_loss=False, criterion=softmax_loss):
+def evaluate(model, X, y, batch_size=100, num_samples=None, return_loss=False, criterion=softmax_loss, return_accuracy=True):
     N = X.shape[0] # number of examples
 
     # Sub-sample the data
@@ -30,21 +30,28 @@ def check_accuracy(model, X, y, batch_size=100, num_samples=None, return_loss=Fa
 
         # model predictions
         y_pred = np.argmax(logits, axis=1)
-        num_correct_preds += np.sum(y_pred == y_minibatch)
+
+        if return_accuracy:
+            num_correct_preds += np.sum(y_pred == y_minibatch)
 
         if return_loss:
             # model loss
             loss = criterion(logits, y_minibatch)
             total_loss += loss * X_minibatch.shape[0]
 
-    # calculate accuracy
-    accuracy = num_correct_preds/num_samples
-
-    if return_loss:
+    if return_accuracy and return_loss:
+        # calculate accuracy
+        accuracy = num_correct_preds/num_samples
         loss = total_loss/X.shape[0]
         return accuracy, loss
-
-    return accuracy
+    elif return_accuracy:
+        accuracy = num_correct_preds/num_samples
+        return accuracy, None
+    elif return_loss:
+        loss = total_loss/X.shape[0]
+        return None, loss
+    else:
+        return None, None
 
 def train(model, criterion, optimizer, X_train, y_train, X_val, y_val, **kwargs):
     # unpack keyword arguments
@@ -54,6 +61,7 @@ def train(model, criterion, optimizer, X_train, y_train, X_val, y_val, **kwargs)
     print_every = kwargs.pop("print_every", 10)
     verbose = kwargs.pop("verbose", True)
     log_wandb = kwargs.pop("log_wandb", False)
+    calc_accuracy = kwargs.pop("calc_accuracy", True)
 
     train_loss_history = []
     val_loss_history = []
@@ -61,7 +69,7 @@ def train(model, criterion, optimizer, X_train, y_train, X_val, y_val, **kwargs)
     val_acc_history = []
     
     best_val_acc = 0
-    loss_at_best_val = None
+    best_val_loss = float('inf')
     best_params = None
     best_epoch = None
     
@@ -111,59 +119,82 @@ def train(model, criterion, optimizer, X_train, y_train, X_val, y_val, **kwargs)
         
         # Calculating Training and Validation accuracy after every epoch
         model.eval()
-        train_acc, train_loss = check_accuracy(
+        train_acc, train_loss = evaluate(
             model, X_train, y_train,
             batch_size=batch_size,
             return_loss=True,
+            return_accuracy=calc_accuracy,
             criterion=criterion
         )
-        val_acc, val_loss = check_accuracy(
+        val_acc, val_loss = evaluate(
             model, X_val, y_val,
             batch_size=batch_size,
             return_loss=True,
+            return_accuracy=calc_accuracy,
             criterion=criterion
         )
 
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-            loss_at_best_val = val_loss
-            best_params = copy.deepcopy(model.parameters())
-            best_epoch = epoch
+        if calc_accuracy:
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
+                loss_at_best_val = val_loss
+                best_params = copy.deepcopy(model.parameters())
+                best_epoch = epoch
+        else:
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_params = copy.deepcopy(model.parameters())
+                best_epoch = epoch
 
         # logging the train/val loss and accuracy
         train_loss_history.append(train_loss)
         val_loss_history.append(val_loss)
-        train_acc_history.append(train_acc)
-        val_acc_history.append(val_acc)
+        if calc_accuracy:
+            train_acc_history.append(train_acc)
+            val_acc_history.append(val_acc)
 
         if log_wandb:
             data_to_log = {
                 "epoch": epoch,
                 "train_loss": train_loss,
-                "val_loss": val_loss,
-                "train_acc": train_acc,
-                "val_acc": val_acc
+                "val_loss": val_loss
             }
+            if calc_accuracy:
+                data_to_log["train_acc"] = train_acc
+                data_to_log["val_acc"] = val_acc
+
             wandb.log(data_to_log)
 
         if verbose is True:
-            print(f"Epoch: {epoch} | Train Accuracy: {train_acc*100:.3f} | Val Accuracy: {val_acc*100:.3f} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f}")
+            print(f"Epoch: {epoch} ", end='')
+            if calc_accuracy:
+                print("| Train Accuracy: {train_acc*100:.3f} | Val Accuracy: {val_acc*100:.3f}", end='')
+            print(f"|  Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f}")
             print()
     
     if log_wandb:
         data_to_log = {
             "best_val_acc": best_val_acc,
             "best_epoch": best_epoch,
-            "loss_at_best_val": loss_at_best_val
+            "best_val_loss": best_val_loss
         }
 
-    print(f"\nBEST VAL ACCURACY : {best_val_acc*100:.4f} | epoch: {best_epoch} | Val loss: {loss_at_best_val:.4f}")
+        wandb.log(data_to_log)
+
+    # Printing Final performance
+    print()
+    if calc_accuracy:
+        print(f"BEST VAL ACCURACY : {best_val_acc*100:.4f} ", end='')
+    print(f"Best Epoch: {best_epoch} | Val loss: {best_val_loss:.4f}")
     model.load_params(best_params)
     print(f"Best Parameters have been loaded in the model")
 
     # returning the train/val loss and accuracies
-    return train_acc_history, val_acc_history,\
-        train_loss_history, val_loss_history
+    if calc_accuracy:
+        return train_acc_history, val_acc_history,\
+            train_loss_history, val_loss_history
+    else:
+        return train_loss_history, val_loss_history
 
 def trigger_training(config, X_train, y_train, X_val, y_val):
     np.random.seed(42)
@@ -194,8 +225,6 @@ def get_model(config):
         dim = config.pop(f"hidden_dims{i}")
         hidden_dims.append(dim)
     
-    print(hidden_dims)
-
     model = FullyConnectedNet(
         input_dim, hidden_dims, num_classes, 
         activation, **config)

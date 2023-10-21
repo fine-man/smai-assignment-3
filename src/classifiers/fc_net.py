@@ -32,7 +32,7 @@ class FullyConnectedNet():
         # getting the activation function
         self.activation_forward = get_activation_forward(activation)
         self.activation_backward = get_activation_backward(activation)
-
+        
         # Activation to be applied after the last affine layer
         if self.last_activation:
             self.last_activation_forward = get_activation_forward(last_activation)
