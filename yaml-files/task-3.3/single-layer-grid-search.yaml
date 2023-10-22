@@ -19,7 +19,7 @@ parameters:
   
   # optimizer config
   optimizer.update_rule:
-    values: ["adam", "sgd"]
+    values: ["sgd"]
   optimizer.learning_rate:
     values: [0.0001, 0.0005, 0.001, 0.01]
   
