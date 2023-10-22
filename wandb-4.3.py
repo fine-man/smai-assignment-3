@@ -22,7 +22,6 @@ import copy
 import os
 import argparse
 from random import randrange
-from matplotlib import pyplot as plt
 from PIL import Image
 import wandb
 import yaml
