@@ -20,4 +20,4 @@ else
     exit 1
 fi
 
-python wandb-3.3.py --path "$file_path"
+python -u wandb-3.3.py --path "$file_path"

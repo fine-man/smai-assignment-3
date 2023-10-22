@@ -9,6 +9,9 @@
 # SBATCH --mail-user=vansh.garg@research.iiit.ac.in
 # SBATCH --mail-type=ALL
 
+module load u18/cuda/10.2
+module load u18/cudnn/8.3.3-cuda-10.2
+
 # Usage: ./batch.sh /path/to/directory
 pwd
 
@@ -21,4 +24,4 @@ else
     exit 1
 fi
 
-python wandb-4.3.py --path "$file_path"
+python -u wandb-4.3.py --path "$file_path"
