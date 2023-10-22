@@ -63,6 +63,7 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
     device = kwargs.pop("device", "cpu")
 
     model.to(device)
+    print(f"\nModel is on device: {device}\n")
 
     train_loss_history = []
     val_loss_history = []
