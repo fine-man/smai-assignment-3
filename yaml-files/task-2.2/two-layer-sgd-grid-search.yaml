@@ -13,9 +13,9 @@ parameters:
   model.num_layers:
     value: 2
   model.hidden_dims1:
-    values: [8, 16, 32, 64, 128]
+    values: [8, 16]
   model.hidden_dims2:
-    values: [8, 16, 32, 64, 128]
+    values: [8, 16, 32]
   model.num_classes:
     value: 6
   
@@ -23,13 +23,13 @@ parameters:
   optimizer.update_rule:
     value: sgd
   optimizer.learning_rate:
-    values: [0.0001, 0.0005, 0.001, 0.01, 0.1]
+    values: [0.0001, 0.0005, 0.001, 0.01]
   
   # training config
   training.update_type:
     values: ["minibatch", "batch", "stochastic"]
   training.batch_size:
-    values: [8, 16, 64, 128]
+    values: [8, 16, 32]
   training.epochs:
     value: 500
   training.log_wandb:
