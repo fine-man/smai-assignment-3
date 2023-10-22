@@ -1,12 +1,15 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import DataLoader
+from .classifiers.mnist_cnn import SimpleCNN
 import copy
 import wandb
 
-def evaluate(model, eval_dataset, batch_size=100, return_loss=True, criterion=nn.CrossEntropyLoss(), return_accuracy=True):
+def evaluate(model, eval_dataset, batch_size=100, return_loss=True, criterion=nn.CrossEntropyLoss(), return_accuracy=True, device='cpu'):
     num_samples = len(eval_dataset) # number of examples
     
+    model.to(device)
     # creating a Dataloader
     eval_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=True)
     it = 0 # iteration number
@@ -18,6 +21,10 @@ def evaluate(model, eval_dataset, batch_size=100, return_loss=True, criterion=nn
     with torch.no_grad():
         model.eval()
         for X_minibatch, y_minibatch in eval_loader:
+            # putting the data on device
+            X_minibatch = X_minibatch.to(device)
+            y_minibatch = y_minibatch.to(device)
+
             logits = model(X_minibatch)
 
             # model predictions
@@ -53,6 +60,9 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
     verbose = kwargs.pop("verbose", True)
     log_wandb = kwargs.pop("log_wandb", False)
     calc_accuracy = kwargs.pop("calc_accuracy", True)
+    device = kwargs.pop("device", "cpu")
+
+    model.to(device)
 
     train_loss_history = []
     val_loss_history = []
@@ -70,6 +80,8 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
     num_iterations = iterations_per_epoch * num_epochs
     num_train_samples = len(train_dataset)
 
+    print(f"Number of Iterations Per Epoch: {iterations_per_epoch}")
+
     it = 1 # current iteration number
 
     for epoch in range(1, num_epochs + 1):
@@ -78,6 +90,8 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
         # creating the minibatch loader
         model.train()
         for X_minibatch, y_minibatch in train_loader:
+            X_minibatch = X_minibatch.to(device)
+            y_minibatch = y_minibatch.to(device)
             # forward pass
             logits = model(X_minibatch)
 
@@ -103,14 +117,16 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
             batch_size=batch_size,
             return_loss=True,
             return_accuracy=calc_accuracy,
-            criterion=criterion
+            criterion=criterion,
+            device=device
         )
         val_acc, val_loss = evaluate(
             model, val_dataset,
             batch_size=batch_size,
             return_loss=True,
             return_accuracy=calc_accuracy,
-            criterion=criterion
+            criterion=criterion,
+            device=device
         )
 
         if calc_accuracy:
@@ -170,3 +186,4 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
             train_loss_history, val_loss_history
     else:
         return train_loss_history, val_loss_history
+

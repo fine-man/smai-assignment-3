@@ -1,0 +1,36 @@
+method: grid
+project: smai-assignment3-task4
+name: two-conv-layers-grid-search
+parameters:
+  criterion:
+    value: CE
+  
+  # model config
+  model.conv_layers:
+    value: 2
+  model.num_channels:
+    values: [32, 64, 128]
+  model.kernel_size:
+    values: [1, 3, 5]
+  model.stride:
+    values: [1, 3, 5]
+  model.dropout:
+    values: [0, 0.1, 0.25]
+  model.num_classes:
+    value: 10
+  
+  # optimizer config
+  optimizer.learning_rate:
+    values: [0.0005, 0.001, 0.01]
+  
+  # training config
+  training.batch_size:
+    values: [64, 128]
+  training.epochs:
+    value: 20
+  training.log_wandb:
+    value: True
+  training.verbose:
+    value: True
+  training.print_every:
+    value: 100
