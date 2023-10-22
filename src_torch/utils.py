@@ -63,7 +63,7 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
     device = kwargs.pop("device", "cpu")
 
     model.to(device)
-    print(f"\nModel is on device: {device}\n")
+    print(f"\nModel is on device: {device}\n", flush=True)
 
     train_loss_history = []
     val_loss_history = []
@@ -81,7 +81,7 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
     num_iterations = iterations_per_epoch * num_epochs
     num_train_samples = len(train_dataset)
 
-    print(f"Number of Iterations Per Epoch: {iterations_per_epoch}")
+    print(f"Number of Iterations Per Epoch: {iterations_per_epoch}", flush=True)
 
     it = 1 # current iteration number
 
@@ -108,7 +108,7 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
             
             # print iteration number and loss
             if verbose and it % print_every == 0:
-                print(f"Iteration: {it}/{num_iterations} | loss = {loss:.4f}")
+                print(f"Iteration: {it}/{num_iterations} | loss = {loss:.4f}", flush=True)
             it += 1
         
         # Calculating Training and Validation accuracy after every epoch
@@ -164,7 +164,7 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
             if calc_accuracy:
                 print(f"| Train Accuracy: {train_acc*100:.3f} | Val Accuracy: {val_acc*100:.3f}", end='')
             print(f"|  Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f}")
-            print()
+            print(flush=True)
     
     if log_wandb:
         data_to_log = {
@@ -176,10 +176,10 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
         wandb.log(data_to_log)
 
     # Printing Final performance
-    print()
+    print(flush=True)
     if calc_accuracy:
         print(f"BEST VAL ACCURACY : {best_val_acc*100:.4f} ", end='')
-    print(f"Best Epoch: {best_epoch} | Val loss: {best_val_loss:.4f}")
+    print(f"Best Epoch: {best_epoch} | Val loss: {best_val_loss:.4f}", flush=True)
 
     # returning the train/val loss and accuracies
     if calc_accuracy:

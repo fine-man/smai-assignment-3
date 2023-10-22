@@ -13,8 +13,8 @@ sys.path.append(f"{FOLDERNAME}")
 # DATA_FOLDER = os.path.join(FOLDERNAME, "SMAI-Dataset-release/IIIT-CFW")
 DATA_FOLDER = os.path.join(FOLDERNAME, "datasets")
 YAML_FOLDER = os.path.join(FOLDERNAME, "yaml-files")
-print(DATA_FOLDER)
-print(YAML_FOLDER)
+print(DATA_FOLDER, flush=True)
+print(YAML_FOLDER, flush=True)
 
 import numpy as np
 import pandas as pd
@@ -66,7 +66,7 @@ def trigger_training(config, train_dataset, val_dataset):
     np.random.seed(42)
     # getting the model, criterion and optimizer
     model = get_model(config["model"])
-    print(model)
+    print(model, flush=True)
     criterion = get_criterion(config["criterion"])
     optimizer = get_optimizer(config["optimizer"], model)
 
@@ -101,7 +101,7 @@ def sweep_agent_manager():
     config = re_nest_config(dict(wandb.config))
     # setting the wandb run name for the current config
     run_name = make_wandb_run_name(config)
-    print(f"\nRun Name: {run_name}\n")
+    print(f"\nRun Name: {run_name}\n", flush=True)
     run.name = run_name
     # start the training
     trigger_training(config, train_dataset, val_dataset)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     path = args.path
-    print(f"Path of sweep configuration file: {path}")
+    print(f"Path of sweep configuration file: {path}", flush=True)
 
     # Loading the train/val/test data
     transform = transforms.Compose([
@@ -136,22 +136,22 @@ if __name__ == "__main__":
 
     train_dataset, val_dataset = random_split(mnist_train, [train_size, val_size])
 
-    print(f"Length of Training Data: {len(train_dataset)}")
-    print(f"Length of Validation Data: {len(val_dataset)}")
+    print(f"Length of Training Data: {len(train_dataset)}", flush=True)
+    print(f"Length of Validation Data: {len(val_dataset)}", flush=True)
 
     # Reading the wandb config file
     with open(path, "r") as stream:
         try:
             sweep_configuration = yaml.safe_load(stream)
-            print(sweep_configuration)
+            print(sweep_configuration, flush=True)
         except yaml.YAMLError as exc:
-            print(exc)
+            print(exc, flush=True)
             exit(-1)
 
     # Starting Wandb
     api_key = "8c09025842609f9e17e5aa0de5aa2ab26314a316"
     wandb.login(key=api_key)
     project_name = sweep_configuration.get("project", "smai-assignment3-task4")
-    print(f"Wandb Project Name: {project_name}")
+    print(f"Wandb Project Name: {project_name}", flush=True)
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
     wandb.agent(sweep_id=sweep_id, function=sweep_agent_manager)
