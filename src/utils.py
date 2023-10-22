@@ -137,7 +137,7 @@ def train(model, criterion, optimizer, X_train, y_train, X_val, y_val, **kwargs)
         if calc_accuracy:
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                loss_at_best_val = val_loss
+                best_val_loss = val_loss
                 best_params = copy.deepcopy(model.parameters())
                 best_epoch = epoch
         else:
