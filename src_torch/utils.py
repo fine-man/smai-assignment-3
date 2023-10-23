@@ -11,7 +11,7 @@ def evaluate(model, eval_dataset, batch_size=100, return_loss=True, criterion=nn
     
     model.to(device)
     # creating a Dataloader
-    eval_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=True)
+    eval_loader = DataLoader(eval_dataset, batch_size=batch_size)
     it = 0 # iteration number
     accuracy = 0
     num_correct_preds = 0
@@ -51,6 +51,44 @@ def evaluate(model, eval_dataset, batch_size=100, return_loss=True, criterion=nn
         return None, loss
     else:
         return None, None
+
+def predict(model, eval_dataset, batch_size=100, device='cpu', return_true_labels=True):
+    num_samples = len(eval_dataset) # number of examples
+    
+    model.to(device)
+    print(f"Model is on device: {device}")
+
+    # creating a Dataloader
+    eval_loader = DataLoader(eval_dataset, batch_size=batch_size)
+    num_iterations = len(eval_loader)
+    it = 0 # iteration number
+    true_preds = []
+    preds = []
+
+    print(f"Total number of iterations: {num_iterations}")
+
+    model.eval()
+    with torch.no_grad():
+        for i, (X_minibatch, y_minibatch) in enumerate(eval_loader):
+            X_minibatch = X_minibatch.to(device)
+            y_minibatch = y_minibatch.to(device)
+
+            logits = model(X_minibatch)
+
+            # model predictions
+            y_pred = torch.argmax(logits, axis=1).detach().cpu()
+            preds.append(y_pred)
+
+            if return_true_labels:
+                true_preds.append(y_minibatch.detach().cpu())
+    
+    preds = torch.concatenate(preds, dim=0)
+    if return_true_labels:
+        true_preds = torch.concatenate(true_preds, dim=0)
+        return preds, true_preds
+
+    return preds
+
 
 def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
     # unpack keyword arguments
