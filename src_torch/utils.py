@@ -52,7 +52,7 @@ def evaluate(model, eval_dataset, batch_size=100, return_loss=True, criterion=nn
     else:
         return None, None
 
-def predict(model, eval_dataset, batch_size=100, device='cpu', return_true_labels=True):
+def predict(model, eval_dataset, batch_size=100, device='cpu', argmax=True, return_true_labels=True):
     num_samples = len(eval_dataset) # number of examples
     
     model.to(device)
@@ -76,7 +76,11 @@ def predict(model, eval_dataset, batch_size=100, device='cpu', return_true_label
             logits = model(X_minibatch)
 
             # model predictions
-            y_pred = torch.argmax(logits, axis=1).detach().cpu()
+            if argmax:
+                y_pred = torch.argmax(logits, axis=1).detach().cpu()
+            else:
+                y_pred = logits.detach().cpu()
+
             preds.append(y_pred)
 
             if return_true_labels:
@@ -89,8 +93,7 @@ def predict(model, eval_dataset, batch_size=100, device='cpu', return_true_label
 
     return preds
 
-
-def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
+def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs):
     # unpack keyword arguments
     batch_size = kwargs.pop("batch_size", 100)
     num_epochs = kwargs.pop("epochs", 10)
@@ -114,7 +117,8 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
     best_epoch = None
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    if val_dataset:
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
     iterations_per_epoch = len(train_loader)
     num_iterations = iterations_per_epoch * num_epochs
     num_train_samples = len(train_dataset)
@@ -159,14 +163,16 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
             criterion=criterion,
             device=device
         )
-        val_acc, val_loss = evaluate(
-            model, val_dataset,
-            batch_size=batch_size,
-            return_loss=True,
-            return_accuracy=calc_accuracy,
-            criterion=criterion,
-            device=device
-        )
+
+        if val_dataset:
+            val_acc, val_loss = evaluate(
+                model, val_dataset,
+                batch_size=batch_size,
+                return_loss=True,
+                return_accuracy=calc_accuracy,
+                criterion=criterion,
+                device=device
+            )
 
         if calc_accuracy:
             if val_acc > best_val_acc:
@@ -225,4 +231,3 @@ def train(model, criterion, optimizer, train_dataset, val_dataset, **kwargs):
             train_loss_history, val_loss_history
     else:
         return train_loss_history, val_loss_history
-
