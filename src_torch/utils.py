@@ -177,7 +177,7 @@ def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs
         if calc_accuracy:
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                loss_at_best_val = val_loss
+                best_val_loss = val_loss
                 best_epoch = epoch
         else:
             if val_loss < best_val_loss:
@@ -222,7 +222,7 @@ def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs
     # Printing Final performance
     print(flush=True)
     if calc_accuracy:
-        print(f"BEST VAL ACCURACY : {best_val_acc*100:.4f} ", end='')
+        print(f"BEST VAL ACCURACY : {best_val_acc*100:.4f} | ", end='')
     print(f"Best Epoch: {best_epoch} | Val loss: {best_val_loss:.4f}", flush=True)
 
     # returning the train/val loss and accuracies
