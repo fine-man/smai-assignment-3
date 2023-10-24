@@ -1,0 +1,32 @@
+method: grid
+project: smai-assignment3-task1
+name: logistic-grid-search
+parameters:
+  criterion:
+    value: softmax
+  
+  # model config
+  model.input_dim:
+    value: 11
+  model.num_layers:
+    value: 0
+  model.num_classes:
+    value: 6
+  
+  # optimizer config
+  optimizer.update_rule:
+    values: ["sgd", "adam"]
+  optimizer.learning_rate:
+    values: [0.0001, 0.0005, 0.001, 0.01, 0.1]
+  
+  # training config
+  training.update_type:
+    values: ["minibatch", "batch", "stochastic"]
+  training.batch_size:
+    values: [8, 16, 32, 64, 128]
+  training.epochs:
+    value: 1000
+  training.log_wandb:
+    value: True
+  training.verbose:
+    value: False

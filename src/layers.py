@@ -302,13 +302,14 @@ def BCELoss(x, y, return_grad=False):
         y_[np.arange(N), y] = 1.0
         y = y_
 
-    loss = -y * np.log(x) - (1 - y) * np.log(1 - x) # (N, C)
+    eps = 1e-300
+    loss = -y * np.log(x + eps) - (1 - y) * np.log(1 - x + eps) # (N, C)
     loss = np.sum(loss, axis=1) # (N, )
     loss = np.mean(loss, axis=0) # ()
 
     if return_grad:
         grad = np.zeros_like(x) # (N, C)
-        grad[:, :] = (-1/N) * (y/x - (1-y)/(1-x))
+        grad[:, :] = (-1/N) * (y/(x + eps) - (1-y)/(1-x + eps))
         return loss, grad
     return loss
 

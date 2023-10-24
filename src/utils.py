@@ -3,9 +3,19 @@ import copy
 from src import *
 from src.classifiers import *
 from .layers import get_criterion
+from sklearn.metrics import accuracy_score
 import wandb
 
-def evaluate(model, X, y, batch_size=100, num_samples=None, return_loss=False, criterion=softmax_loss, return_accuracy=True):
+def evaluate(model, X, y, **kwargs):
+    batch_size = kwargs.pop("batch_size", 100)
+    num_samples = kwargs.pop("num_samples", None)
+    argmax = kwargs.pop("argmax", True)
+    eval_type = kwargs.pop("eval_type", 'multiclass')
+    return_loss = kwargs.pop("return_loss", False)
+    criterion = kwargs.pop("criterion", softmax_loss)
+    return_accuracy = kwargs.pop("return_accuracy", True)
+    accuracy_func = kwargs.pop("accuracy_func", accuracy_score)
+
     N = X.shape[0] # number of examples
 
     # Sub-sample the data
@@ -29,15 +39,24 @@ def evaluate(model, X, y, batch_size=100, num_samples=None, return_loss=False, c
         logits = model.forward(X_minibatch)
 
         # model predictions
-        y_pred = np.argmax(logits, axis=1)
+        if argmax:
+            y_pred = np.argmax(logits, axis=1)
+        else:
+            y_pred = np.copy(logits)
+
+        if eval_type == "multilabel":
+            y_pred[y_pred < 0.5] = 0
+            y_pred[y_pred >= 0.5] = 1
 
         if return_accuracy:
-            num_correct_preds += np.sum(y_pred == y_minibatch)
+            num_correct_preds += accuracy_func(y_minibatch, y_pred, normalize=False)
 
         if return_loss:
             # model loss
             loss = criterion(logits, y_minibatch)
             total_loss += loss * X_minibatch.shape[0]
+        
+        it += 1
 
     if return_accuracy and return_loss:
         # calculate accuracy
@@ -62,6 +81,8 @@ def train(model, criterion, optimizer, X_train, y_train, X_val, y_val, **kwargs)
     verbose = kwargs.pop("verbose", True)
     log_wandb = kwargs.pop("log_wandb", False)
     calc_accuracy = kwargs.pop("calc_accuracy", True)
+    argmax = kwargs.pop("argmax", True)
+    eval_type = kwargs.pop("eval_type", "multiclass")
 
     train_loss_history = []
     val_loss_history = []
@@ -80,6 +101,8 @@ def train(model, criterion, optimizer, X_train, y_train, X_val, y_val, **kwargs)
     # total number of iterations
     num_iterations = iterations_per_epoch * num_epochs
     it = 1 # current iteration number
+
+    print(f"Number of Iterations Per Epoch: {iterations_per_epoch}")
 
     for epoch in range(1, num_epochs + 1):
         model.zero_grad()
@@ -124,14 +147,18 @@ def train(model, criterion, optimizer, X_train, y_train, X_val, y_val, **kwargs)
             batch_size=batch_size,
             return_loss=True,
             return_accuracy=calc_accuracy,
-            criterion=criterion
+            criterion=criterion,
+            argmax=argmax,
+            eval_type=eval_type
         )
         val_acc, val_loss = evaluate(
             model, X_val, y_val,
             batch_size=batch_size,
             return_loss=True,
             return_accuracy=calc_accuracy,
-            criterion=criterion
+            criterion=criterion,
+            argmax=argmax,
+            eval_type=eval_type
         )
 
         if calc_accuracy:
@@ -184,7 +211,7 @@ def train(model, criterion, optimizer, X_train, y_train, X_val, y_val, **kwargs)
     # Printing Final performance
     print()
     if calc_accuracy:
-        print(f"BEST VAL ACCURACY : {best_val_acc*100:.4f} ", end='')
+        print(f"BEST VAL ACCURACY : {best_val_acc*100:.4f} | ", end='')
     print(f"Best Epoch: {best_epoch} | Val loss: {best_val_loss:.4f}")
     model.load_params(best_params)
     print(f"Best Parameters have been loaded in the model")
@@ -215,10 +242,11 @@ def trigger_training(config, X_train, y_train, X_val, y_val):
 def get_model(config):
     input_dim = config.pop("input_dim")
     num_classes = config.pop("num_classes")
-    activation = config.pop("activation")
+    activation = config.pop("activation", "relu")
 
     # Number of layers
     num_layers = config.pop("num_layers", 1)
+    print(num_layers)
     hidden_dims = []
 
     for i in range(1, num_layers + 1):
