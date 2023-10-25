@@ -11,7 +11,7 @@ parameters:
   model.num_layers:
     value: 1
   model.hidden_dims1:
-    values: [2048, 1024, 512]
+    values: [2048, 1024, 512, 256]
   model.num_classes:
     value: 10
   model.flatten_first:
