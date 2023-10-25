@@ -37,20 +37,20 @@ class NoisyMNIST(Dataset):
             return noisy_image, image
 
 class DoubleMNIST(Dataset):
-    def __init__(self, images_path_list, transform=None, target_transform=None):
-        self.images_path_list = images_path_list
+    def __init__(self, images, labels, transform=None, target_transform=None):
+        self.images = images
+        self.labels = labels
         self.transform = transform
         self.target_transform = target_transform
     
     def __len__(self):
-        return len(self.images_path_list)
+        return len(self.images)
     
     def __getitem__(self, idx):
-        img_path = self.images_path_list[idx]
+        image = self.images[idx]
 
-        image = read_image(img_path)
         image = image/255.0
-        label = int(os.path.basename(img_path)[-6:-4])
+        label = self.labels[idx]
 
         if self.transform:
             image = self.transform(image)

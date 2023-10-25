@@ -42,7 +42,7 @@ def get_model(config):
     num_classes = config.pop("num_classes", 10)
     num_channels = config.pop("num_channels", 16)
     dropout = config.pop("dropout", 0.1)
-    num_conv_layers = config.pop("num_conv_layers", 2)
+    num_conv_layers = config.pop("conv_layers", 2)
     kernel_size = config.pop("kernel_size", 3)
     stride = config.pop("stride", 1)
     

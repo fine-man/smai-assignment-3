@@ -2,11 +2,111 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from .classifiers.mnist_cnn import SimpleCNN
+from .classifiers import SimpleCNN, SimpleMLP
 import copy
 import wandb
 
-def evaluate(model, eval_dataset, batch_size=100, return_loss=True, criterion=nn.CrossEntropyLoss(), return_accuracy=True, device='cpu'):
+def get_model_type(config):
+    if "conv_layers" in config.keys():
+        return "CNN"
+    else:
+        return "MLP"
+
+def get_model_mlp(config):
+    input_dim = config.pop("input_dim")
+    num_classes = config.pop("num_classes")
+
+    # Number of layers
+    num_layers = config.pop("num_layers", 1)
+    hidden_dims = []
+
+    for i in range(1, num_layers + 1):
+        dim = config.pop(f"hidden_dims{i}")
+        hidden_dims.append(dim)
+    
+    model = SimpleMLP(input_dim, hidden_dims, num_classes, **config)
+    return model
+
+def get_model_cnn(config):
+    input_dim = config.pop("input_dim", 28)
+    num_classes = config.pop("num_classes", 10)
+    num_conv_layers = config.pop("conv_layers", 2)
+    
+    model = SimpleCNN(input_dim, num_classes, **config)
+    return model
+
+def get_criterion(crit_name):
+    if crit_name == "CE":
+        return nn.CrossEntropyLoss()
+    elif crit_name == "BCE":
+        return nn.BCELoss()
+    else:
+        return nn.CrossEntropyLoss()
+
+def get_optimizer(model, config):
+    lr = config["learning_rate"]
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    return optimizer
+
+def trigger_training(config, train_dataset, val_dataset):
+    torch.manual_seed(42)
+
+    # getting the model, criterion and optimizer
+    model_type = get_model_type(config["model"])
+    print(f"Model Type: {model_type}")
+    if model_type == "CNN":
+        model = get_model_cnn(config["model"])
+    else:
+        model = get_model_mlp(config["model"])
+
+    print(model, flush=True)
+    criterion = get_criterion(config["criterion"])
+    optimizer = get_optimizer(model, config["optimizer"])
+
+    # training config
+    train_config = config["training"]
+    device = torch.device('cuda' if torch.cuda.is_available() else "cpu")
+    
+    train(
+        model, criterion, optimizer, train_dataset, val_dataset, device=device, **train_config)
+    
+    return model
+
+def accuracy_score(y_true, y_pred, normalize=True):
+    if len(y_true.shape) > 1:
+        eval_type = 'multilabel'
+    else:
+        eval_type = 'multiclass'
+
+    if eval_type == 'multilabel':
+        y_pred[y_pred < 0.5] = 0
+        y_pred[y_pred >= 0.5] = 1
+        
+        # considering correctness only when all labels are correct
+        num_correct = torch.all((y_pred == y_true), dim=1).sum().cpu().item() 
+        
+        if normalize:
+            accuracy = num_correct/y_pred.shape[0]
+            return accuracy
+        else:
+            return num_correct
+    else:
+        num_correct = torch.sum(y_pred == y_true).cpu().item()
+        if normalize:
+            accuracy = num_correct/y_pred.shape[0]
+            return accuracy
+        else:
+            return num_correct
+
+def evaluate(model, eval_dataset, **kwargs):
+    batch_size = kwargs.pop("batch_size", 100)
+    argmax = kwargs.pop("argmax", True)
+    return_loss = kwargs.pop("return_loss", True)
+    criterion = kwargs.pop("criterion", nn.CrossEntropyLoss())
+    return_accuracy = kwargs.pop("return_accuracy", True)
+    accuracy_func = kwargs.pop("accuracy_func", accuracy_score)
+    device = kwargs.pop("device", "cpu")
+
     num_samples = len(eval_dataset) # number of examples
     
     model.to(device)
@@ -28,10 +128,13 @@ def evaluate(model, eval_dataset, batch_size=100, return_loss=True, criterion=nn
             logits = model(X_minibatch)
 
             # model predictions
-            y_pred = torch.argmax(logits, axis=1)
+            if argmax:
+                y_pred = torch.argmax(logits, axis=1)
+            else:
+                y_pred = logits
 
             if return_accuracy:
-                num_correct_preds += torch.sum(y_pred == y_minibatch).cpu().item()
+                num_correct_preds += accuracy_func(y_minibatch, y_pred, normalize=False)
 
             if return_loss:
                 # model loss
@@ -102,6 +205,8 @@ def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs
     log_wandb = kwargs.pop("log_wandb", False)
     calc_accuracy = kwargs.pop("calc_accuracy", True)
     device = kwargs.pop("device", "cpu")
+    argmax = kwargs.pop("argmax", True)
+    accuracy_func = kwargs.pop("accuracy_func", accuracy_score)
 
     model.to(device)
     print(f"\nModel is on device: {device}\n", flush=True)
@@ -117,8 +222,6 @@ def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs
     best_epoch = None
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    if val_dataset:
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
     iterations_per_epoch = len(train_loader)
     num_iterations = iterations_per_epoch * num_epochs
     num_train_samples = len(train_dataset)
@@ -149,10 +252,10 @@ def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs
             optimizer.zero_grad()
             
             # print iteration number and loss
-            if verbose and it % print_every == 0:
+            if (verbose and it % print_every == 0) or (it == 1):
                 print(f"Iteration: {it}/{num_iterations} | loss = {loss:.4f}", flush=True)
             it += 1
-        
+
         # Calculating Training and Validation accuracy after every epoch
         model.eval()
         train_acc, train_loss = evaluate(
@@ -161,7 +264,9 @@ def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs
             return_loss=True,
             return_accuracy=calc_accuracy,
             criterion=criterion,
-            device=device
+            device=device,
+            argmax=argmax,
+            accuracy_func=accuracy_func,
         )
 
         if val_dataset:
@@ -171,7 +276,9 @@ def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs
                 return_loss=True,
                 return_accuracy=calc_accuracy,
                 criterion=criterion,
-                device=device
+                device=device,
+                argmax=argmax,
+                accuracy_func=accuracy_func
             )
 
         if calc_accuracy:

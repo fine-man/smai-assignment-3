@@ -1,0 +1,34 @@
+method: grid
+project: smai-assignment3-task5.2
+name: permuted-mnist-single-layer
+parameters:
+  criterion:
+    value: CE
+  
+  # model config
+  model.input_dim:
+    value: 784
+  model.num_layers:
+    value: 1
+  model.hidden_dims1:
+    values: [1024, 512, 256]
+  model.num_classes:
+    value: 10
+  model.flatten_first:
+    value: True
+  
+  # optimizer config
+  optimizer.learning_rate:
+    values: [0.01, 0.001, 0.0005]
+  
+  # training config
+  training.batch_size:
+    values: [64, 128, 256]
+  training.epochs:
+    value: 20
+  training.log_wandb:
+    value: True
+  training.verbose:
+    value: True
+  training.print_every:
+    value: 250

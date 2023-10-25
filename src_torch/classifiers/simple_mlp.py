@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from ..model_utils import get_activation_function
 
 class SimpleMLP(nn.Module):
     def __init__(
@@ -7,7 +8,7 @@ class SimpleMLP(nn.Module):
             input_dim,
             hidden_dims,
             num_classes,
-            flatten_first=False,
+            flatten_first=False, # Whether to flatten the input first
             last_activation=False, # activation to be used after last layer
     ):
         super(SimpleMLP, self).__init__()
@@ -36,10 +37,12 @@ class SimpleMLP(nn.Module):
         # Last Layer
         out_dim = num_classes
         modules.append(nn.Linear(in_dim, out_dim))
-        if self.last_activation:
-            modules.append(nn.ReLU())
         
-        self.modules = nn.ModuleList(modules)
+        if self.last_activation:
+            activation_func = get_activation_function(self.last_activation)
+            modules.append(activation_func)
+
+        self.linears = nn.ModuleList(modules)
         
     def forward(self, x):
         N = x.shape[0] # Number of samples
@@ -48,7 +51,7 @@ class SimpleMLP(nn.Module):
         else:
             out = x
 
-        for module in self.modules:
+        for module in self.linears:
             out = module(out)
         
         return out
