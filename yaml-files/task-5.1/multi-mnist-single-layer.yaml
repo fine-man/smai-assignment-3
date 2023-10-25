@@ -1,5 +1,5 @@
 method: grid
-project: smai-assignment3-task5
+project: smai-assignment3-task5.1
 name: multi-mnist-single-layer
 parameters:
   criterion:
@@ -19,7 +19,7 @@ parameters:
   
   # optimizer config
   optimizer.learning_rate:
-    values: [0.01, 0.001, 0.0005]
+    values: [0.001, 0.0005, 0.01]
   
   # training config
   training.batch_size:
