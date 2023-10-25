@@ -1,0 +1,40 @@
+method: grid
+project: smai-assignment3-task5.1
+name: multi-mnist-two-conv-layers
+parameters:
+  criterion:
+    value: BCELogits
+  
+  # model config
+  model.input_dim:
+    value: 64
+  model.conv_layers:
+    value: 2
+  model.num_channels:
+    values: [32, 16, 8]
+  model.kernel_size:
+    values: [5, 3]
+  model.stride:
+    values: [1]
+  model.dropout:
+    values: [0.25, 0.1, 0]
+  model.num_classes:
+    value: 10
+  
+  # optimizer config
+  optimizer.learning_rate:
+    values: [0.001, 0.0005, 0.01]
+  
+  # training config
+  training.batch_size:
+    values: [128, 64]
+  training.epochs:
+    value: 20
+  training.log_wandb:
+    value: True
+  training.verbose:
+    value: True
+  training.print_every:
+    value: 100
+  training.argmax:
+    value: False

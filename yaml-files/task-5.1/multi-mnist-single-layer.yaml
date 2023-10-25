@@ -3,7 +3,7 @@ project: smai-assignment3-task5
 name: multi-mnist-single-layer
 parameters:
   criterion:
-    value: BCE
+    value: BCELogits
   
   # model config
   model.input_dim:
@@ -14,8 +14,6 @@ parameters:
     values: [2048, 1024, 512]
   model.num_classes:
     value: 10
-  model.last_activation:
-    value: "sigmoid"
   model.flatten_first:
     value: True
   
@@ -25,7 +23,7 @@ parameters:
   
   # training config
   training.batch_size:
-    values: [64, 128, 256]
+    values: [64, 128]
   training.epochs:
     value: 10
   training.log_wandb:

@@ -40,6 +40,8 @@ def get_criterion(crit_name):
         return nn.CrossEntropyLoss()
     elif crit_name == "BCE":
         return nn.BCELoss()
+    elif crit_name == "BCELogits":
+        return nn.BCEWithLogitsLoss()
     else:
         return nn.CrossEntropyLoss()
 
@@ -61,6 +63,7 @@ def trigger_training(config, train_dataset, val_dataset):
 
     print(model, flush=True)
     criterion = get_criterion(config["criterion"])
+    print(criterion)
     optimizer = get_optimizer(model, config["optimizer"])
 
     # training config
@@ -73,6 +76,7 @@ def trigger_training(config, train_dataset, val_dataset):
     return model
 
 def accuracy_score(y_true, y_pred, normalize=True):
+    y_pred = copy.deepcopy(y_pred)
     if len(y_true.shape) > 1:
         eval_type = 'multilabel'
     else:
@@ -111,7 +115,7 @@ def evaluate(model, eval_dataset, **kwargs):
     
     model.to(device)
     # creating a Dataloader
-    eval_loader = DataLoader(eval_dataset, batch_size=batch_size)
+    eval_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=True)
     it = 0 # iteration number
     accuracy = 0
     num_correct_preds = 0
@@ -140,6 +144,8 @@ def evaluate(model, eval_dataset, **kwargs):
                 # model loss
                 loss = criterion(logits, y_minibatch).cpu().item()
                 total_loss += loss * X_minibatch.shape[0]
+
+            it += 1
 
     if return_accuracy and return_loss:
         # calculate accuracy
@@ -242,7 +248,15 @@ def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs
             logits = model(X_minibatch)
 
             # calculate loss
+            y_minibatch = y_minibatch
             loss = criterion(logits, y_minibatch)
+
+            # print iteration number and loss
+            if (verbose and it % print_every == 0) or (it == 1):
+                print(f"Iteration: {it}/{num_iterations} | loss = {loss:.4f}", flush=True)
+
+            # print(logits[0], logits.dtype)
+            # print(y_minibatch[0], y_minibatch.dtype)
 
             # backward pass
             loss.backward()
@@ -251,9 +265,6 @@ def train(model, criterion, optimizer, train_dataset, val_dataset=None, **kwargs
             optimizer.step()
             optimizer.zero_grad()
             
-            # print iteration number and loss
-            if (verbose and it % print_every == 0) or (it == 1):
-                print(f"Iteration: {it}/{num_iterations} | loss = {loss:.4f}", flush=True)
             it += 1
 
         # Calculating Training and Validation accuracy after every epoch
