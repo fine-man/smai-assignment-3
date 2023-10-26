@@ -1,0 +1,38 @@
+method: grid
+project: smai-assignment3-task5.1
+name: multi-mnist-two-layers
+parameters:
+  criterion:
+    value: BCELogits
+  
+  # model config
+  model.input_dim:
+    value: 4096
+  model.num_layers:
+    value: 2
+  model.hidden_dims1:
+    values: [2048, 1024, 512]
+  model.hidden_dims2:
+    values: [2048, 1024, 512]
+  model.num_classes:
+    value: 10
+  model.flatten_first:
+    value: True
+  
+  # optimizer config
+  optimizer.learning_rate:
+    values: [0.001, 0.0005, 0.01]
+  
+  # training config
+  training.batch_size:
+    values: [64, 128]
+  training.epochs:
+    value: 20
+  training.log_wandb:
+    value: True
+  training.verbose:
+    value: True
+  training.print_every:
+    value: 250
+  training.argmax:
+    value: False

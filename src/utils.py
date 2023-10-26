@@ -229,6 +229,7 @@ def trigger_training(config, X_train, y_train, X_val, y_val):
     model = get_model(config["model"])
     print(model.parameters().keys())
     criterion = get_criterion(config["criterion"])
+    print(criterion)
     optimizer = get_optimizer(config["optimizer"], model)
 
     # training config
